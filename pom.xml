@@ -110,6 +110,11 @@
             <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
         <dependency>
+            <!-- was: spring-boot-starter-actuator (metrics endpoint: /q/metrics, Prometheus format) -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
             <!-- was: springdoc-openapi-starter-webmvc-ui (OpenAPI at /q/openapi, Swagger UI at /q/swagger-ui) -->
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-openapi</artifactId>
