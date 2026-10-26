@@ -411,6 +411,10 @@
                                      'jaxrs-spec' generates JAX-RS interfaces that Quarkus REST serves natively. -->
                                 <!-- RestController implementation is provided by Petclinic developers -->
                                 <interfaceOnly>true</interfaceOnly>
+                                <!-- ApiUtil.java imports org.springframework.web.context.request.NativeWebRequest which
+                                     does not exist on the Quarkus classpath. The file is unused with interfaceOnly=true
+                                     and returnResponse=true (all interfaces return jakarta.ws.rs.core.Response). -->
+                                <filesToSkip>ApiUtil.java</filesToSkip>
                                 <returnResponse>true</returnResponse>
                                 <!-- Generate API interfaces from OpenAPI tags -->
                                 <useTags>true</useTags>
