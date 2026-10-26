@@ -19,19 +19,17 @@ import java.util.Collection;
 import java.util.List;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.inject.Inject;
 
 import jakarta.persistence.Query;
 import org.jspecify.annotations.NonNull;
-import org.springframework.context.annotation.Profile;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.model.Pet;
 import org.springframework.samples.petclinic.model.PetType;
 import org.springframework.samples.petclinic.repository.PetRepository;
-import org.springframework.stereotype.Repository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * JPA implementation of the {@link PetRepository} interface.
@@ -42,11 +40,10 @@ import org.springframework.stereotype.Repository;
  * @author Michael Isvy
  * @author Vitaliy Fedoriv
  */
-@Repository
-@Profile("jpa")
+@ApplicationScoped
 public class JpaPetRepositoryImpl implements PetRepository {
 
-    @PersistenceContext
+    @Inject
     private EntityManager em;
 
     @Override
@@ -71,12 +68,12 @@ public class JpaPetRepositoryImpl implements PetRepository {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Collection<Pet> findAll() throws DataAccessException {
+	public Collection<Pet> findAll() {
 		return this.em.createQuery("SELECT pet FROM Pet pet").getResultList();
 	}
 
     @Override
-    public Page<Pet> findAll(@NonNull Pageable pageable) throws DataAccessException {
+    public Page<Pet> findAll(@NonNull Pageable pageable) {
         Query query = this.em.createQuery("SELECT pet FROM Pet pet ORDER BY pet.id");
         query.setFirstResult((int) pageable.getOffset());
         query.setMaxResults(pageable.getPageSize());
@@ -87,7 +84,7 @@ public class JpaPetRepositoryImpl implements PetRepository {
     }
 
 	@Override
-	public void delete(Pet pet) throws DataAccessException {
+	public void delete(Pet pet) {
 		//this.em.remove(this.em.contains(pet) ? pet : this.em.merge(pet));
 		String petId = pet.getId().toString();
 		this.em.createQuery("DELETE FROM Visit visit WHERE pet.id=" + petId).executeUpdate();

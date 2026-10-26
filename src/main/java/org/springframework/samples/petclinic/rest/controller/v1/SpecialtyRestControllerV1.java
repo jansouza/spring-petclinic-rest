@@ -16,17 +16,14 @@
 
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.springframework.samples.petclinic.mapper.SpecialtyMapper;
 import org.springframework.samples.petclinic.model.Specialty;
 import org.springframework.samples.petclinic.rest.api.SpecialtiesApi;
 import org.springframework.samples.petclinic.rest.dto.SpecialtyDto;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
@@ -36,9 +33,9 @@ import java.util.List;
  * @author Vitaliy Fedoriv
  */
 
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("api")
+// Quarkus: was @RestController @CrossOrigin @RequestMapping("/api"). The /api prefix is now @ApplicationPath("/api") on PetClinicApplication and
+// CORS is configured with quarkus.http.cors.* in application.properties.
+@ApplicationScoped
 public class SpecialtyRestControllerV1 implements SpecialtiesApi {
 
     private final ClinicService clinicService;
@@ -50,59 +47,58 @@ public class SpecialtyRestControllerV1 implements SpecialtiesApi {
         this.specialtyMapper = specialtyMapper;
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<List<SpecialtyDto>> listSpecialties() {
+    public Response listSpecialties() {
         List<SpecialtyDto> specialties = new ArrayList<>();
         specialties.addAll(specialtyMapper.toSpecialtyDtos(this.clinicService.findAllSpecialties()));
         if (specialties.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(specialties, HttpStatus.OK);
+        return Response.ok(specialties).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<SpecialtyDto> getSpecialty(Integer specialtyId) {
+    public Response getSpecialty(Integer specialtyId) {
         Specialty specialty = this.clinicService.findSpecialtyById(specialtyId);
         if (specialty == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(specialtyMapper.toSpecialtyDto(specialty), HttpStatus.OK);
+        return Response.ok(specialtyMapper.toSpecialtyDto(specialty)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<SpecialtyDto> addSpecialty(SpecialtyDto specialtyDto) {
-        HttpHeaders headers = new HttpHeaders();
+    public Response addSpecialty(SpecialtyDto specialtyDto) {
         Specialty specialty = specialtyMapper.toSpecialty(specialtyDto);
         this.clinicService.saveSpecialty(specialty);
-        headers.setLocation(UriComponentsBuilder.newInstance().path("/api/specialties/{id}").buildAndExpand(specialty.getId()).toUri());
-        return new ResponseEntity<>(specialtyMapper.toSpecialtyDto(specialty), headers, HttpStatus.CREATED);
+        String location = "/api/specialties/" + specialty.getId();
+        return Response.status(Response.Status.CREATED).header(HttpHeaders.LOCATION, location).entity(specialtyMapper.toSpecialtyDto(specialty)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<SpecialtyDto> updateSpecialty(Integer specialtyId, SpecialtyDto specialtyDto) {
+    public Response updateSpecialty(Integer specialtyId, SpecialtyDto specialtyDto) {
         Specialty currentSpecialty = this.clinicService.findSpecialtyById(specialtyId);
         if (currentSpecialty == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         currentSpecialty.setName(specialtyDto.getName());
         this.clinicService.saveSpecialty(currentSpecialty);
-        return new ResponseEntity<>(specialtyMapper.toSpecialtyDto(currentSpecialty), HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Transactional
     @Override
-    public ResponseEntity<SpecialtyDto> deleteSpecialty(Integer specialtyId) {
+    public Response deleteSpecialty(Integer specialtyId) {
         Specialty specialty = this.clinicService.findSpecialtyById(specialtyId);
         if (specialty == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         this.clinicService.deleteSpecialty(specialty);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
 }

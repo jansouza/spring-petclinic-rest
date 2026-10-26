@@ -10,18 +10,31 @@
     <description>REST version of the Spring Petclinic sample application</description>
     <url>https://spring-petclinic.github.io/</url>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
-        <relativePath/> <!-- lookup parent from Maven repository -->
-    </parent>
+    <!-- REMOVED: spring-boot-starter-parent 4.1.1. Replaced by the Quarkus platform BOM (dependencyManagement below).
+         The properties and plugin versions that the Spring Boot parent used to provide are now declared explicitly. -->
 
     <properties>
 
+        <!-- Quarkus platform -->
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
+
+        <!-- Properties formerly inherited from spring-boot-starter-parent -->
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler-plugin.version>3.16.0</maven.compiler-plugin.version>
+        <maven.surefire-plugin.version>3.6.0</maven.surefire-plugin.version>
+        <maven.enforcer-plugin.version>3.6.3</maven.enforcer-plugin.version>
+        <maven.build-helper-plugin.version>3.6.2</maven.build-helper-plugin.version>
+
         <!-- Third-party libraries -->
+        <!-- TODO: Migration required - spring-data-jdbc-core (used by the 'jdbc' repository implementation only) has no
+             Quarkus Spring-compat equivalent; see the commented dependency below -->
         <spring-data-jdbc.version>1.2.1.RELEASE</spring-data-jdbc.version>
-        <springdoc-openapi-ui.version>3.1.0</springdoc-openapi-ui.version>
+        <swagger-annotations.version>2.2.55</swagger-annotations.version>
         <jackson-databind-nullable.version>0.2.11</jackson-databind-nullable.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <jaxb-api.version>2.3.1</jaxb-api.version>
@@ -51,114 +64,135 @@
 
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <!-- Spring Boot Dependencies all inherit from the spring-boot-starter-parent -->
+        <!-- Quarkus core / REST (Spring compatibility layer) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <!-- REMOVED: quarkus-spring-web (was: spring-boot-starter-webmvc). All controllers are now JAX-RS resources; no Spring MVC annotation remains. -->
+        <dependency>
+            <!-- was: spring-boot-starter (DI): @Component, @Service, @Autowired, @Configuration, @Bean, @Value -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-spring-di</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aspectj</artifactId>
+            <!-- was: spring-tx / @Transactional -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-spring-tx</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-cache</artifactId>
+            <!-- was: spring-boot-starter-data-jpa -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-spring-data-jpa</artifactId>
+        </dependency>
+        <!-- REMOVED: quarkus-spring-security (was: spring-boot-starter-security). @PreAuthorize is parked (see TODOs in the controllers) and the Spring Security config classes are excluded from compilation. -->
+        <dependency>
+            <!-- was: spring-boot-starter-validation -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <!-- was: spring-boot-starter-actuator (health endpoint: /q/health) -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jdbc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
+            <!-- was: springdoc-openapi-starter-webmvc-ui (OpenAPI at /q/openapi, Swagger UI at /q/swagger-ui) -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
         </dependency>
 
+        <!-- TODO: Migration required - spring-boot-starter-cache removed: no @Cacheable/@CacheEvict/@EnableCaching usage
+             exists in the sources (only a comment in ClinicServiceImpl). Add quarkus-spring-cache if caching is introduced. -->
+        <!-- TODO: Migration required - spring-boot-starter-aspectj removed: CallMonitoringAspect (AspectJ + Spring JMX)
+             has no Spring-compat equivalent in Quarkus. To be handled in the code module (CDI interceptor or removal). -->
+        <!-- TODO: Migration required - spring-boot-starter-jdbc removed: the 'jdbc' repository implementations
+             (repository/jdbc/**) depend on Spring JdbcTemplate, which has no Quarkus compat extension. -->
 
         <!-- Data stores and supporting libs -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-h2console</artifactId>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-mysql</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.hsqldb</groupId>
-            <artifactId>hsqldb</artifactId>
-            <scope>runtime</scope>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!-- TODO: Migration required - org.hsqldb:hsqldb: Quarkus has no JDBC extension for HSQLDB, so the 'hsqldb'
+             profile is not supported. Use H2, MySQL or PostgreSQL instead. -->
+        <!-- TODO: Migration required - spring-boot-h2console: no Quarkus equivalent (H2 console is not exposed). -->
+        <!-- TODO: Migration required - org.springframework.data:spring-data-jdbc-core (OneToManyResultSetExtractor, used only by
+             the 'jdbc' repository implementations) has no Quarkus compat equivalent.
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-jdbc-core</artifactId>
             <version>${spring-data-jdbc.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
+        -->
 
         <!-- Test libs -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
+            <!-- was: spring-boot-starter-test -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security-test</artifactId>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit-mockito</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
+            <!-- was: spring-boot-starter-security-test (@WithMockUser -> @TestSecurity) -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Migration: @QuarkusTest runs the app in the QuarkusClassLoader, which the plain jacoco-maven-plugin agent does not
+                 instrument. This extension records coverage itself (target/jacoco-quarkus.exec, report in target/jacoco-report). -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jacoco</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Was transitively provided by spring-boot-starter-test; not part of the Quarkus test starters -->
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.27.7</version>
             <scope>test</scope>
         </dependency>
 
         <!-- JSON / XML / Serialization libs -->
+        <!-- REMOVED: tools.jackson.core:jackson-core / jackson-databind (Jackson 3). Quarkus uses Jackson 2 via quarkus-rest-jackson;
+             no source file imports tools.jackson. -->
         <dependency>
-            <groupId>tools.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>tools.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jayway.jsonpath</groupId>
-            <artifactId>json-path</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>${springdoc-openapi-ui.version}</version>
+            <!-- Required by the generated API interfaces (springdoc documentation provider) -->
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>${swagger-annotations.version}</version>
         </dependency>
         <dependency>
             <groupId>org.openapitools</groupId>
@@ -249,23 +283,21 @@
 
     <build>
         <plugins>
+            <!-- REMOVED: spring-boot-maven-plugin (incl. the build-info goal that fed Spring Boot Actuator's /info).
+                 Replaced by quarkus-maven-plugin. Build info is not exposed by the Quarkus health endpoint. -->
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
                 <executions>
                     <execution>
-                        <!-- Spring Boot Actuator displays build-related information
-                          if a META-INF/build-info.properties file is present -->
                         <goals>
-                            <goal>build-info</goal>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                            <goal>native-image-agent</goal>
                         </goals>
-                        <configuration>
-                            <additionalProperties>
-                                <encoding.source>${project.build.sourceEncoding}</encoding.source>
-                                <encoding.reporting>${project.reporting.outputEncoding}</encoding.reporting>
-                                <java.release>${maven.compiler.release}</java.release>
-                            </additionalProperties>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -280,6 +312,12 @@
                         <exclude>**/org/springframework/samples/petclinic/rest/dto/**</exclude>
                         <exclude>**/org/springframework/samples/petclinic/rest/api/**</exclude>
                     </excludes>
+                    <!-- Migration: classes loaded by the QuarkusClassLoader (@QuarkusTest) are recorded by the quarkus-jacoco extension;
+                         the plain agent below only covers plain JUnit tests. Both write to the same file. -->
+                    <exclClassLoaders>*QuarkusClassLoader</exclClassLoaders>
+                    <destFile>${project.build.directory}/jacoco-quarkus.exec</destFile>
+                    <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
+                    <append>true</append>
                 </configuration>
                 <executions>
                     <execution>
@@ -357,10 +395,9 @@
                         </goals>
                         <configuration>
                             <inputSpec>${project.basedir}/src/main/resources/openapi.yml</inputSpec>
-                            <generatorName>spring</generatorName>
-                            <library>spring-boot</library>
+                            <generatorName>jaxrs-spec</generatorName>
 
-                            <!-- Only enabling model andopenapi-generator-maven-plugin API generation -->
+                            <!-- Only enabling model and API generation -->
                             <modelNameSuffix>Dto</modelNameSuffix>
                             <apiPackage>org.springframework.samples.petclinic.rest.api</apiPackage>
                             <generateModels>true</generateModels>
@@ -370,19 +407,25 @@
                                 <importMapping>Nullable=org.jspecify.annotations.Nullable</importMapping>
                             </importMappings>
                             <configOptions>
+                                <!-- MIGRATION: was generator 'spring' (Spring MVC interfaces, ignored by quarkus-spring-web).
+                                     'jaxrs-spec' generates JAX-RS interfaces that Quarkus REST serves natively. -->
                                 <!-- RestController implementation is provided by Petclinic developers -->
                                 <interfaceOnly>true</interfaceOnly>
+                                <returnResponse>true</returnResponse>
                                 <!-- Generate API interfaces from OpenAPI tags -->
                                 <useTags>true</useTags>
-                                <!-- Activating Java 8 features -->
-                                <performBeanValidation>true</performBeanValidation>
-                                <useSpringBoot3>true</useSpringBoot3>
+                                <useBeanValidation>true</useBeanValidation>
                                 <useJakartaEe>true</useJakartaEe>
                                 <openApiNullable>false</openApiNullable>
-                                <!-- override the default library to jersey2 -->
+                                <useSwaggerAnnotations>false</useSwaggerAnnotations>
                                 <serializationLibrary>jackson</serializationLibrary>
-                                <!-- switch documentation provider to springdoc -->
-                                <documentationProvider>springdoc</documentationProvider>
+                                <!-- jaxrs-spec defaults to Joda; use java.time like the original Spring generator -->
+                                <dateLibrary>java8</dateLibrary>
+                                <!-- jaxrs-spec emits a @JsonCreator constructor with required=true for readOnly properties (e.g. "id"),
+                                     so request bodies without "id" (POST /specialties, /visits, ...) were rejected with 400 -->
+                                <generateJsonCreator>false</generateJsonCreator>
+                                <!-- jaxrs-spec defaults to src/gen/java; keep the path registered by build-helper below -->
+                                <sourceFolder>src/main/java</sourceFolder>
                             </configOptions>
                         </configuration>
                     </execution>
@@ -391,6 +434,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${maven.build-helper-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>add-source</id>
@@ -409,6 +453,37 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler-plugin.version}</version>
+                <configuration>
+                    <!-- Required by Quarkus (CDI/REST parameter name discovery) -->
+                    <parameters>true</parameters>
+                    <!-- TODO: Migration required — the following Spring-only sources are parked (not compiled) because
+                         they have no Quarkus equivalent in the Spring compatibility layer. See docs/quarkus-migration-decisions.md.
+                         - repository/jdbc/**: Spring JdbcTemplate/NamedParameterJdbcTemplate/SimpleJdbcInsert (profile "jdbc")
+                         - repository/springdatajpa/**: Spring Data JPA repositories (default profile in the original). The
+                           quarkus-spring-data-jpa processor (3.40.1) cannot generate the custom save/delete methods nor handle the
+                           two-level interface design (repository/<X>Repository + SpringData<X>Repository + *Override fragments).
+                           The plain-JPA layer (repository/jpa/**, EntityManager based) is the active persistence layer instead.
+                         - security/BasicAuthenticationConfig, DisableSecurityConfig: Spring Security HttpSecurity/SecurityFilterChain
+                         - util/CallMonitoringAspect: Spring AOP + JMX (@ManagedResource) -->
+                    <excludes>
+                        <exclude>**/org/springframework/samples/petclinic/repository/jdbc/**</exclude>
+                        <exclude>**/org/springframework/samples/petclinic/repository/springdatajpa/**</exclude>
+                        <exclude>**/org/springframework/samples/petclinic/security/BasicAuthenticationConfig.java</exclude>
+                        <exclude>**/org/springframework/samples/petclinic/security/DisableSecurityConfig.java</exclude>
+                        <exclude>**/org/springframework/samples/petclinic/util/CallMonitoringAspect.java</exclude>
+                    </excludes>
+                    <testExcludes>
+                        <!-- TODO: Migration required - tests for the parked Spring JDBC / Spring Data JPA layers and the Spring test config -->
+                        <testExclude>**/service/clinicService/ClinicServiceH2JdbcTests.java</testExclude>
+                        <testExclude>**/service/clinicService/ClinicServiceHsqlJdbcTests.java</testExclude>
+                        <testExclude>**/service/clinicService/ClinicServiceSpringDataJpaTests.java</testExclude>
+                        <testExclude>**/service/clinicService/ApplicationTestConfig.java</testExclude>
+                        <testExclude>**/service/userService/UserServiceH2JdbcTests.java</testExclude>
+                        <testExclude>**/service/userService/UserServiceHsqlJdbcTests.java</testExclude>
+                        <testExclude>**/service/userService/UserServiceSpringDataJpaTests.java</testExclude>
+                    </testExcludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>default-compile</id>
@@ -428,7 +503,7 @@
                                     -Amapstruct.suppressGeneratorVersionInfoComment=true
                                 </compilerArg>
                                 <compilerArg>
-                                    -Amapstruct.defaultComponentModel=spring
+                                    -Amapstruct.defaultComponentModel=jakarta-cdi
                                 </compilerArg>
                             </compilerArgs>
                         </configuration>
@@ -438,6 +513,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven.enforcer-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>enforce-java</id>
@@ -474,6 +550,32 @@
                 <artifactId>maven-site-plugin</artifactId>
                 <version>${maven.site-plugin.version}</version>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire-plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
+                <skipITs>false</skipITs>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+    </profiles>
 </project>

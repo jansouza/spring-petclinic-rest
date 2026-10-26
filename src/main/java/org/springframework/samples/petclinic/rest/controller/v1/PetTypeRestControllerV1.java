@@ -16,27 +16,24 @@
 
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.springframework.samples.petclinic.mapper.PetTypeMapper;
 import org.springframework.samples.petclinic.model.PetType;
 import org.springframework.samples.petclinic.rest.api.PettypesApi;
 import org.springframework.samples.petclinic.rest.dto.PetTypeDto;
 import org.springframework.samples.petclinic.rest.dto.PetTypeFieldsDto;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.transaction.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("api")
+// Quarkus: was @RestController @CrossOrigin @RequestMapping("/api"). The /api prefix is now @ApplicationPath("/api") on PetClinicApplication and
+// CORS is configured with quarkus.http.cors.* in application.properties.
+@ApplicationScoped
 public class PetTypeRestControllerV1 implements PettypesApi {
 
     private final ClinicService clinicService;
@@ -48,58 +45,57 @@ public class PetTypeRestControllerV1 implements PettypesApi {
         this.petTypeMapper = petTypeMapper;
     }
 
-    @PreAuthorize("hasAnyRole(@roles.OWNER_ADMIN, @roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasAnyRole(@roles.OWNER_ADMIN, @roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<List<PetTypeDto>> listPetTypes() {
+    public Response listPetTypes() {
         List<PetType> petTypes = new ArrayList<>(this.clinicService.findAllPetTypes());
         if (petTypes.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(petTypeMapper.toPetTypeDtos(petTypes), HttpStatus.OK);
+        return Response.ok(petTypeMapper.toPetTypeDtos(petTypes)).build();
     }
 
-    @PreAuthorize("hasAnyRole(@roles.OWNER_ADMIN, @roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasAnyRole(@roles.OWNER_ADMIN, @roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<PetTypeDto> getPetType(Integer petTypeId) {
+    public Response getPetType(Integer petTypeId) {
         PetType petType = this.clinicService.findPetTypeById(petTypeId);
         if (petType == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(petTypeMapper.toPetTypeDto(petType), HttpStatus.OK);
+        return Response.ok(petTypeMapper.toPetTypeDto(petType)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<PetTypeDto> addPetType(PetTypeFieldsDto petTypeFieldsDto) {
-        HttpHeaders headers = new HttpHeaders();
+    public Response addPetType(PetTypeFieldsDto petTypeFieldsDto) {
         final PetType type = petTypeMapper.toPetType(petTypeFieldsDto);
         this.clinicService.savePetType(type);
-        headers.setLocation(UriComponentsBuilder.newInstance().path("/api/pettypes/{id}").buildAndExpand(type.getId()).toUri());
-        return new ResponseEntity<>(petTypeMapper.toPetTypeDto(type), headers, HttpStatus.CREATED);
+        String location = "/api/pettypes/" + type.getId();
+        return Response.status(Response.Status.CREATED).header(HttpHeaders.LOCATION, location).entity(petTypeMapper.toPetTypeDto(type)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<PetTypeDto> updatePetType(Integer petTypeId, PetTypeDto petTypeDto) {
+    public Response updatePetType(Integer petTypeId, PetTypeDto petTypeDto) {
         PetType currentPetType = this.clinicService.findPetTypeById(petTypeId);
         if (currentPetType == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         currentPetType.setName(petTypeDto.getName());
         this.clinicService.savePetType(currentPetType);
-        return new ResponseEntity<>(petTypeMapper.toPetTypeDto(currentPetType), HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Transactional
     @Override
-    public ResponseEntity<PetTypeDto> deletePetType(Integer petTypeId) {
+    public Response deletePetType(Integer petTypeId) {
         PetType petType = this.clinicService.findPetTypeById(petTypeId);
         if (petType == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         this.clinicService.deletePetType(petType);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
 }

@@ -24,3 +24,19 @@ springboot-petclinic-server/
 
 # newman reports
 ./src/test/postman/reports/
+
+# AI agent session/local files - may contain tokens and secrets
+.claude/
+.cursor/
+.codex/
+.opencode/
+.copilot/
+.cline/
+.continue/
+.windsurf/
+.junie/
+.pi/
+.roo/
+.augment/
+.aider*
+CLAUDE.local.md

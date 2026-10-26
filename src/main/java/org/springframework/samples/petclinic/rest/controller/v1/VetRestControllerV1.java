@@ -15,9 +15,9 @@
  */
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.springframework.samples.petclinic.mapper.SpecialtyMapper;
 import org.springframework.samples.petclinic.mapper.VetMapper;
 import org.springframework.samples.petclinic.model.Specialty;
@@ -25,9 +25,6 @@ import org.springframework.samples.petclinic.model.Vet;
 import org.springframework.samples.petclinic.rest.api.VetsApi;
 import org.springframework.samples.petclinic.rest.dto.VetDto;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
@@ -38,9 +35,9 @@ import java.util.stream.Collectors;
  * @author Vitaliy Fedoriv
  */
 
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("api")
+// Quarkus: was @RestController @CrossOrigin @RequestMapping("/api"). The /api prefix is now @ApplicationPath("/api") on PetClinicApplication and
+// CORS is configured with quarkus.http.cors.* in application.properties.
+@ApplicationScoped
 public class VetRestControllerV1 implements VetsApi {
 
     private final ClinicService clinicService;
@@ -53,46 +50,45 @@ public class VetRestControllerV1 implements VetsApi {
         this.specialtyMapper = specialtyMapper;
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<List<VetDto>> listVets() {
+    public Response listVets() {
         List<VetDto> vets = new ArrayList<>(vetMapper.toVetDtos(this.clinicService.findAllVets()));
         if (vets.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(vets, HttpStatus.OK);
+        return Response.ok(vets).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<VetDto> getVet(Integer vetId)  {
+    public Response getVet(Integer vetId)  {
         Vet vet = this.clinicService.findVetById(vetId);
         if (vet == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(vetMapper.toVetDto(vet), HttpStatus.OK);
+        return Response.ok(vetMapper.toVetDto(vet)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<VetDto> addVet(VetDto vetDto) {
-        HttpHeaders headers = new HttpHeaders();
+    public Response addVet(VetDto vetDto) {
         Vet vet = vetMapper.toVet(vetDto);
         if(vet.getNrOfSpecialties() > 0){
             List<Specialty> vetSpecialities = this.clinicService.findSpecialtiesByNameIn(vet.getSpecialties().stream().map(Specialty::getName).collect(Collectors.toSet()));
             vet.setSpecialties(vetSpecialities);
         }
         this.clinicService.saveVet(vet);
-        headers.setLocation(UriComponentsBuilder.newInstance().path("/api/vets/{id}").buildAndExpand(vet.getId()).toUri());
-        return new ResponseEntity<>(vetMapper.toVetDto(vet), headers, HttpStatus.CREATED);
+        String location = "/api/vets/" + vet.getId();
+        return Response.status(Response.Status.CREATED).header(HttpHeaders.LOCATION, location).entity(vetMapper.toVetDto(vet)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<VetDto> updateVet(Integer vetId,VetDto vetDto)  {
+    public Response updateVet(Integer vetId,VetDto vetDto)  {
         Vet currentVet = this.clinicService.findVetById(vetId);
         if (currentVet == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         currentVet.setFirstName(vetDto.getFirstName());
         currentVet.setLastName(vetDto.getLastName());
@@ -105,18 +101,18 @@ public class VetRestControllerV1 implements VetsApi {
             currentVet.setSpecialties(vetSpecialities);
         }
         this.clinicService.saveVet(currentVet);
-        return new ResponseEntity<>(vetMapper.toVetDto(currentVet), HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.VET_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Transactional
     @Override
-    public ResponseEntity<VetDto> deleteVet(Integer vetId) {
+    public Response deleteVet(Integer vetId) {
         Vet vet = this.clinicService.findVetById(vetId);
         if (vet == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         this.clinicService.deleteVet(vet);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 }

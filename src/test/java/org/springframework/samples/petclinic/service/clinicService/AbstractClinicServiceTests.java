@@ -16,15 +16,14 @@
 package org.springframework.samples.petclinic.service.clinicService;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.quarkus.test.TestTransaction;
+import jakarta.inject.Inject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.samples.petclinic.model.*;
 import org.springframework.samples.petclinic.service.ClinicService;
 import org.springframework.samples.petclinic.util.EntityUtils;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -35,17 +34,8 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * <p> Base class for {@link ClinicService} integration tests. </p> <p> Subclasses should specify Spring context
- * configuration using {@link ContextConfiguration @ContextConfiguration} annotation </p> <p>
- * AbstractclinicServiceTests and its subclasses benefit from the following services provided by the Spring
- * TestContext Framework: </p> <ul> <li><strong>Spring IoC container caching</strong> which spares us unnecessary set up
- * time between test execution.</li> <li><strong>Dependency Injection</strong> of test fixture instances, meaning that
- * we don't need to perform application context lookups. See the use of {@link Autowired @Autowired} on the <code>{@link
- * AbstractClinicServiceTests#clinicService clinicService}</code> instance variable, which uses autowiring <em>by
- * type</em>. <li><strong>Transaction management</strong>, meaning each test method is executed in its own transaction,
- * which is automatically rolled back by default. Thus, even if tests insert or otherwise change database state, there
- * is no need for a teardown or cleanup script. <li> An {@link org.springframework.context.ApplicationContext
- * ApplicationContext} is also inherited and can be used for explicit bean lookup if necessary. </li> </ul>
+ * Base class for {@link ClinicService} integration tests. Concrete subclasses must be annotated with
+ * {@code @QuarkusTest}. Each test method runs in a transaction that is rolled back (see {@link TestTransaction}).
  *
  * @author Ken Krebs
  * @author Rod Johnson
@@ -56,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 abstract class AbstractClinicServiceTests {
 
-    @Autowired
+    @Inject
     protected ClinicService clinicService;
 
     @Test
@@ -78,7 +68,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldInsertOwner() {
         Collection<Owner> owners = this.clinicService.findOwnerByLastName("Schultz");
         int found = owners.size();
@@ -97,7 +87,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldUpdateOwner() {
         Owner owner = this.clinicService.findOwnerById(1);
         String oldLastName = owner.getLastName();
@@ -130,7 +120,7 @@ abstract class AbstractClinicServiceTests {
 //    }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldInsertPetIntoDatabaseAndGenerateId() {
         Owner owner6 = this.clinicService.findOwnerById(6);
         int found = owner6.getPets().size();
@@ -153,7 +143,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldUpdatePetName() throws Exception {
         Pet pet7 = this.clinicService.findPetById(7);
         String oldName = pet7.getName();
@@ -178,7 +168,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldAddNewVisitForPet() {
         Pet pet7 = this.clinicService.findPetById(7);
         int found = pet7.getVisits().size();
@@ -213,7 +203,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldDeletePet(){
         Pet pet = this.clinicService.findPetById(1);
         this.clinicService.deletePet(pet);
@@ -242,7 +232,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldInsertVisit() {
         Collection<Visit> visits = this.clinicService.findAllVisits();
         int found = visits.size();
@@ -263,7 +253,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldUpdateVisit(){
     	Visit visit = this.clinicService.findVisitById(1);
     	String oldDesc = visit.getDescription();
@@ -275,7 +265,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldDeleteVisit(){
     	Visit visit = this.clinicService.findVisitById(1);
         this.clinicService.deleteVisit(visit);
@@ -295,7 +285,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldInsertVet() {
         Collection<Vet> vets = this.clinicService.findAllVets();
         int found = vets.size();
@@ -312,7 +302,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldUpdateVet(){
     	Vet vet = this.clinicService.findVetById(1);
     	String oldLastName = vet.getLastName();
@@ -324,7 +314,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldDeleteVet(){
     	Vet vet = this.clinicService.findVetById(1);
         this.clinicService.deleteVet(vet);
@@ -366,7 +356,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldDeleteOwner(){
     	Owner owner = this.clinicService.findOwnerById(1);
         this.clinicService.deleteOwner(owner);
@@ -394,7 +384,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldInsertPetType() {
         Collection<PetType> petTypes = this.clinicService.findAllPetTypes();
         int found = petTypes.size();
@@ -410,7 +400,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldUpdatePetType(){
     	PetType petType = this.clinicService.findPetTypeById(1);
     	String oldLastName = petType.getName();
@@ -422,7 +412,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldDeletePetType(){
     	PetType petType = this.clinicService.findPetTypeById(1);
         this.clinicService.deletePetType(petType);
@@ -451,7 +441,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldInsertSpecialty() {
         Collection<Specialty> specialties = this.clinicService.findAllSpecialties();
         int found = specialties.size();
@@ -467,7 +457,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldUpdateSpecialty(){
     	Specialty specialty = this.clinicService.findSpecialtyById(1);
     	String oldLastName = specialty.getName();
@@ -479,7 +469,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldDeleteSpecialty(){
         Specialty specialty = new Specialty();
         specialty.setName("test");
@@ -498,7 +488,7 @@ abstract class AbstractClinicServiceTests {
     }
 
     @Test
-    @Transactional
+    @TestTransaction
     void shouldFindSpecialtiesByNameIn() {
         Specialty specialty1 = new Specialty();
         specialty1.setName("radiology");

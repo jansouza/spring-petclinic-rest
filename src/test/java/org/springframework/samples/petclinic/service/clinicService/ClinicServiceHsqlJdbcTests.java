@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: Migration required - Spring JDBC repository layer (profile 'jdbc', repository/jdbc/**) is parked and not compiled; HSQLDB is also unsupported in Quarkus.
+// This file is kept unchanged but excluded from test compilation (see maven-compiler-plugin testExcludes in pom.xml).
 package org.springframework.samples.petclinic.service.clinicService;
 
 import org.springframework.boot.test.context.SpringBootTest;

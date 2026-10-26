@@ -1,59 +1,50 @@
 package org.springframework.samples.petclinic.rest.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
+import jakarta.persistence.PersistenceException;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.notNullValue;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.MediaType;
 import org.springframework.samples.petclinic.mapper.OwnerMapper;
 import org.springframework.samples.petclinic.mapper.PetMapper;
-import org.springframework.samples.petclinic.rest.advice.ExceptionControllerAdvice;
 import org.springframework.samples.petclinic.rest.controller.v2.OwnerRestControllerV2;
 import org.springframework.samples.petclinic.rest.controller.v2.PetRestControllerV2;
 import org.springframework.samples.petclinic.rest.dto.OwnerDto;
 import org.springframework.samples.petclinic.rest.dto.PetDto;
 import org.springframework.samples.petclinic.rest.dto.PetTypeDto;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.samples.petclinic.service.clinicService.ApplicationTestConfig;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
-@SpringBootTest
-@ContextConfiguration(classes = ApplicationTestConfig.class)
-@WebAppConfiguration
+@QuarkusTest
 public class V2RestControllersTests {
-    @Autowired
-    private OwnerRestControllerV2 ownerRestControllerV2;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Autowired
-    private PetRestControllerV2 petRestControllerV2;
+    @Inject
+    OwnerMapper ownerMapper;
 
-    @Autowired
-    private OwnerMapper ownerMapper;
+    @Inject
+    PetMapper petMapper;
 
-    @Autowired
-    private PetMapper petMapper;
-
-    @MockitoBean
-    private ClinicService clinicService;
-
-    private MockMvc mockMvc;
+    @InjectMock
+    ClinicService clinicService;
 
     private List<OwnerDto> owners;
 
@@ -61,9 +52,6 @@ public class V2RestControllersTests {
 
     @BeforeEach
     void initOwners() {
-        this.mockMvc = MockMvcBuilders.standaloneSetup(ownerRestControllerV2, petRestControllerV2)
-            .setControllerAdvice(new ExceptionControllerAdvice())
-            .build();
         owners = new ArrayList<>();
 
         OwnerDto ownerWithPet = new OwnerDto();
@@ -94,42 +82,46 @@ public class V2RestControllersTests {
     }
 
     @Test
-    @WithMockUser(roles = "OWNER_ADMIN")
     void testGetOwnersPageSuccess() throws Exception {
         var pageRequest = PageRequest.of(0, 2, Sort.by("id"));
         var pageOwners = ownerMapper.toOwners(owners.subList(0, 2)).stream().toList();
         given(this.clinicService.findOwners(null, pageRequest))
             .willReturn(new PageImpl<>(pageOwners, pageRequest, owners.size()));
-        this.mockMvc.perform(get("/api/v2/owners?page=0&size=2")
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType("application/json"))
-            .andExpect(jsonPath("$.content[0].id").value(1))
-            .andExpect(jsonPath("$.content[0].firstName").value("George"))
-            .andExpect(jsonPath("$.content[1].id").value(2))
-            .andExpect(jsonPath("$.content[1].firstName").value("Betty"))
-            .andExpect(jsonPath("$.page").value(0))
-            .andExpect(jsonPath("$.size").value(2))
-            .andExpect(jsonPath("$.totalElements").value(4))
-            .andExpect(jsonPath("$.totalPages").value(2));
+        RestAssured.given()
+                .accept(ContentType.JSON)
+            .when()
+                .get("/api/v2/owners?page=0&size=2")
+            .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("content[0].id", equalTo(1))
+                .body("content[0].firstName", equalTo("George"))
+                .body("content[1].id", equalTo(2))
+                .body("content[1].firstName", equalTo("Betty"))
+                .body("page", equalTo(0))
+                .body("size", equalTo(2))
+                .body("totalElements", equalTo(4))
+                .body("totalPages", equalTo(2));
     }
 
     @Test
-    @WithMockUser(roles = "OWNER_ADMIN")
     void testGetPetsPageSuccess() throws Exception {
         var pageRequest = PageRequest.of(0, 5, Sort.by("id"));
         var pagePets = petMapper.toPets(pets).stream().toList();
         given(this.clinicService.findPets(pageRequest))
             .willReturn(new PageImpl<>(pagePets, pageRequest, pets.size()));
-        this.mockMvc.perform(get("/api/v2/pets?page=0&size=5")
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType("application/json"))
-            .andExpect(jsonPath("$.content[0].id").value(3))
-            .andExpect(jsonPath("$.content[0].name").value("Rosy"))
-            .andExpect(jsonPath("$.page").value(0))
-            .andExpect(jsonPath("$.size").value(5))
-            .andExpect(jsonPath("$.totalElements").value(2))
-            .andExpect(jsonPath("$.totalPages").value(1));
+        RestAssured.given()
+                .accept(ContentType.JSON)
+            .when()
+                .get("/api/v2/pets?page=0&size=5")
+            .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("content[0].id", equalTo(3))
+                .body("content[0].name", equalTo("Rosy"))
+                .body("page", equalTo(0))
+                .body("size", equalTo(5))
+                .body("totalElements", equalTo(2))
+                .body("totalPages", equalTo(1));
     }
 }

@@ -1,13 +1,16 @@
 package org.springframework.samples.petclinic;
 
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = PetClinicApplication.class)
+/**
+ * Was: {@code @SpringBootTest(classes = PetClinicApplication.class)}. {@code @QuarkusTest} boots the whole application.
+ */
+@QuarkusTest
 class SpringConfigTests {
 
     @Test
     void contextLoads() {
-        // Test the Spring configuration
+        // Test the application (CDI container) starts
     }
 }

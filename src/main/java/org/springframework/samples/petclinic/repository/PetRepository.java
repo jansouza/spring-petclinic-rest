@@ -18,7 +18,6 @@ package org.springframework.samples.petclinic.repository;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.model.BaseEntity;
@@ -42,7 +41,7 @@ public interface PetRepository {
      *
      * @return a <code>Collection</code> of <code>PetType</code>s
      */
-    List<PetType> findPetTypes() throws DataAccessException;
+    List<PetType> findPetTypes();
 
     /**
      * Retrieve a <code>Pet</code> from the data store by id.
@@ -51,7 +50,7 @@ public interface PetRepository {
      * @return the <code>Pet</code> if found
      * @throws org.springframework.dao.DataRetrievalFailureException if not found
      */
-    Pet findById(int id) throws DataAccessException;
+    Pet findById(int id);
 
     /**
      * Save a <code>Pet</code> to the data store, either inserting or updating it.
@@ -59,7 +58,7 @@ public interface PetRepository {
      * @param pet the <code>Pet</code> to save
      * @see BaseEntity#isNew
      */
-    void save(Pet pet) throws DataAccessException;
+    void save(Pet pet);
 
     /**
      * Retrieve <code>Pet</code>s from the data store, returning all owners
@@ -67,9 +66,9 @@ public interface PetRepository {
      * @return a <code>Collection</code> of <code>Pet</code>s (or an empty <code>Collection</code> if none
      * found)
      */
-	Collection<Pet> findAll() throws DataAccessException;
+	Collection<Pet> findAll();
 
-    Page<Pet> findAll(Pageable pageable) throws DataAccessException;
+    Page<Pet> findAll(Pageable pageable);
 
     /**
      * Delete an <code>Pet</code> to the data store by <code>Pet</code>.
@@ -77,6 +76,6 @@ public interface PetRepository {
      * @param pet the <code>Pet</code> to delete
      *
      */
-	void delete(Pet pet) throws DataAccessException;
+	void delete(Pet pet);
 
 }

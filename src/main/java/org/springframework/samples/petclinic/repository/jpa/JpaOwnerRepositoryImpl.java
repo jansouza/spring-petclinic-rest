@@ -19,18 +19,16 @@ import java.util.Collection;
 import java.util.List;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.inject.Inject;
 import jakarta.persistence.Query;
 
 import org.jspecify.annotations.NonNull;
-import org.springframework.context.annotation.Profile;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.model.Owner;
 import org.springframework.samples.petclinic.repository.OwnerRepository;
-import org.springframework.stereotype.Repository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * JPA implementation of the {@link OwnerRepository} interface.
@@ -41,11 +39,10 @@ import org.springframework.stereotype.Repository;
  * @author Michael Isvy
  * @author Vitaliy Fedoriv
  */
-@Repository
-@Profile("jpa")
+@ApplicationScoped
 public class JpaOwnerRepositoryImpl implements OwnerRepository {
 
-    @PersistenceContext
+    @Inject
     private EntityManager em;
 
 
@@ -67,7 +64,7 @@ public class JpaOwnerRepositoryImpl implements OwnerRepository {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Page<Owner> findByLastName(String lastName, Pageable pageable) throws DataAccessException {
+    public Page<Owner> findByLastName(String lastName, Pageable pageable) {
         Query query = this.em.createQuery("SELECT owner FROM Owner owner WHERE owner.lastName LIKE :lastName ORDER BY owner.id");
         query.setParameter("lastName", lastName + "%");
         query.setFirstResult((int) pageable.getOffset());
@@ -101,14 +98,14 @@ public class JpaOwnerRepositoryImpl implements OwnerRepository {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Collection<Owner> findAll() throws DataAccessException {
+	public Collection<Owner> findAll() {
 		Query query = this.em.createQuery("SELECT owner FROM Owner owner");
         return query.getResultList();
 	}
 
     @SuppressWarnings("unchecked")
     @Override
-    public Page<Owner> findAll(@NonNull Pageable pageable) throws DataAccessException {
+    public Page<Owner> findAll(@NonNull Pageable pageable) {
         Query query = this.em.createQuery("SELECT owner FROM Owner owner ORDER BY owner.id");
         query.setFirstResult((int) pageable.getOffset());
         query.setMaxResults(pageable.getPageSize());
@@ -119,7 +116,7 @@ public class JpaOwnerRepositoryImpl implements OwnerRepository {
     }
 
 	@Override
-	public void delete(Owner owner) throws DataAccessException {
+	public void delete(Owner owner) {
 		this.em.remove(this.em.contains(owner) ? owner : this.em.merge(owner));
 	}
 

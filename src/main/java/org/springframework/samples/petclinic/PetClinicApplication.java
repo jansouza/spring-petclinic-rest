@@ -1,13 +1,11 @@
 package org.springframework.samples.petclinic;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import jakarta.ws.rs.ApplicationPath;
+import jakarta.ws.rs.core.Application;
 
-@SpringBootApplication
-public class PetClinicApplication extends SpringBootServletInitializer {
-
-	public static void main(String[] args) {
-		SpringApplication.run(PetClinicApplication.class, args);
-	}
+// REMOVED: @SpringBootApplication, SpringBootServletInitializer and SpringApplication.run(...) - Quarkus has its own
+// bootstrap (no main class / WAR initializer needed). The Spring Boot application class is replaced by a JAX-RS
+// Application that provides the "/api" prefix previously declared on every controller with @RequestMapping("/api").
+@ApplicationPath("/api")
+public class PetClinicApplication extends Application {
 }

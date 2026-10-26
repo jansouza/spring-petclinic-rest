@@ -16,17 +16,14 @@
 
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.springframework.samples.petclinic.mapper.PetMapper;
 import org.springframework.samples.petclinic.model.Pet;
 import org.springframework.samples.petclinic.rest.api.PetsApi;
 import org.springframework.samples.petclinic.rest.dto.PetDto;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +32,9 @@ import java.util.List;
  * @author Vitaliy Fedoriv
  */
 
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("api")
+// Quarkus: was @RestController @CrossOrigin @RequestMapping("/api"). The /api prefix is now @ApplicationPath("/api") on PetClinicApplication and
+// CORS is configured with quarkus.http.cors.* in application.properties.
+@ApplicationScoped
 public class PetRestControllerV1 implements PetsApi {
 
     private final ClinicService clinicService;
@@ -49,50 +46,50 @@ public class PetRestControllerV1 implements PetsApi {
         this.petMapper = petMapper;
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<PetDto> getPet(Integer petId) {
+    public Response getPet(Integer petId) {
         PetDto pet = petMapper.toPetDto(this.clinicService.findPetById(petId));
         if (pet == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(pet, HttpStatus.OK);
+        return Response.ok(pet).build();
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<List<PetDto>> listPets() {
+    public Response listPets() {
         List<PetDto> pets = new ArrayList<>(petMapper.toPetsDto(this.clinicService.findAllPets()));
         if (pets.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(pets, HttpStatus.OK);
+        return Response.ok(pets).build();
     }
 
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<PetDto> updatePet(Integer petId, PetDto petDto) {
+    public Response updatePet(Integer petId, PetDto petDto) {
         Pet currentPet = this.clinicService.findPetById(petId);
         if (currentPet == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         currentPet.setBirthDate(petDto.getBirthDate());
         currentPet.setName(petDto.getName());
         currentPet.setType(petMapper.toPetType(petDto.getType()));
         this.clinicService.savePet(currentPet);
-        return new ResponseEntity<>(petMapper.toPetDto(currentPet), HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<PetDto> deletePet(Integer petId) {
+    public Response deletePet(Integer petId) {
         Pet pet = this.clinicService.findPetById(petId);
         if (pet == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         this.clinicService.deletePet(pet);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
 }

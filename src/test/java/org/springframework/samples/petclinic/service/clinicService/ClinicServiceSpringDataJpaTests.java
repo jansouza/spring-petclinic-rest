@@ -1,3 +1,5 @@
+// TODO: Migration required - Spring Data JPA repository layer (repository/springdatajpa/**) is parked and not compiled; see docs/quarkus-migration-decisions.md.
+// This file is kept unchanged but excluded from test compilation (see maven-compiler-plugin testExcludes in pom.xml).
 package org.springframework.samples.petclinic.service.clinicService;
 
 import jakarta.persistence.EntityManager;

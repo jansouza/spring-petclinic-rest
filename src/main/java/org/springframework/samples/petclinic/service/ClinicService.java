@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.model.Owner;
@@ -37,38 +36,38 @@ import org.springframework.samples.petclinic.model.Visit;
  */
 public interface ClinicService {
 
-	Pet findPetById(int id) throws DataAccessException;
-	Collection<Pet> findAllPets() throws DataAccessException;
-    Page<Pet> findPets(Pageable pageable) throws DataAccessException;
-	void savePet(Pet pet) throws DataAccessException;
-	void deletePet(Pet pet) throws DataAccessException;
+	Pet findPetById(int id);
+	Collection<Pet> findAllPets();
+    Page<Pet> findPets(Pageable pageable);
+	void savePet(Pet pet);
+	void deletePet(Pet pet);
 
 	Collection<Visit> findVisitsByPetId(int petId);
-	Visit findVisitById(int visitId) throws DataAccessException;
-	Collection<Visit> findAllVisits() throws DataAccessException;
-	void saveVisit(Visit visit) throws DataAccessException;
-	void deleteVisit(Visit visit) throws DataAccessException;
-	Vet findVetById(int id) throws DataAccessException;
-	Collection<Vet> findVets() throws DataAccessException;
-	Collection<Vet> findAllVets() throws DataAccessException;
-	void saveVet(Vet vet) throws DataAccessException;
-	void deleteVet(Vet vet) throws DataAccessException;
-	Owner findOwnerById(int id) throws DataAccessException;
-	Collection<Owner> findAllOwners() throws DataAccessException;
-	Page<Owner> findOwners(String lastName, Pageable pageable) throws DataAccessException;
-	void saveOwner(Owner owner) throws DataAccessException;
-	void deleteOwner(Owner owner) throws DataAccessException;
-	Collection<Owner> findOwnerByLastName(String lastName) throws DataAccessException;
+	Visit findVisitById(int visitId);
+	Collection<Visit> findAllVisits();
+	void saveVisit(Visit visit);
+	void deleteVisit(Visit visit);
+	Vet findVetById(int id);
+	Collection<Vet> findVets();
+	Collection<Vet> findAllVets();
+	void saveVet(Vet vet);
+	void deleteVet(Vet vet);
+	Owner findOwnerById(int id);
+	Collection<Owner> findAllOwners();
+	Page<Owner> findOwners(String lastName, Pageable pageable);
+	void saveOwner(Owner owner);
+	void deleteOwner(Owner owner);
+	Collection<Owner> findOwnerByLastName(String lastName);
 
 	PetType findPetTypeById(int petTypeId);
-	Collection<PetType> findAllPetTypes() throws DataAccessException;
-	Collection<PetType> findPetTypes() throws DataAccessException;
-	void savePetType(PetType petType) throws DataAccessException;
-	void deletePetType(PetType petType) throws DataAccessException;
+	Collection<PetType> findAllPetTypes();
+	Collection<PetType> findPetTypes();
+	void savePetType(PetType petType);
+	void deletePetType(PetType petType);
 	Specialty findSpecialtyById(int specialtyId);
-	Collection<Specialty> findAllSpecialties() throws DataAccessException;
-	void saveSpecialty(Specialty specialty) throws DataAccessException;
-	void deleteSpecialty(Specialty specialty) throws DataAccessException;
+	Collection<Specialty> findAllSpecialties();
+	void saveSpecialty(Specialty specialty);
+	void deleteSpecialty(Specialty specialty);
 
-    List<Specialty> findSpecialtiesByNameIn(Set<String> names) throws DataAccessException;
+    List<Specialty> findSpecialtiesByNameIn(Set<String> names);
 }

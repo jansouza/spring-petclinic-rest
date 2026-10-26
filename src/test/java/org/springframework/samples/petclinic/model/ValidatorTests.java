@@ -6,11 +6,10 @@ import java.util.Locale;
 import java.util.Set;
 
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 /**
  * @author Michael Isvy
@@ -20,15 +19,14 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 class ValidatorTests {
 
     private Validator createValidator() {
-        LocalValidatorFactoryBean localValidatorFactoryBean = new LocalValidatorFactoryBean();
-        localValidatorFactoryBean.afterPropertiesSet();
-        return localValidatorFactoryBean;
+        // was: Spring LocalValidatorFactoryBean
+        return Validation.buildDefaultValidatorFactory().getValidator();
     }
 
     @Test
     void shouldNotValidateWhenFirstNameEmpty() {
 
-        LocaleContextHolder.setLocale(Locale.ENGLISH);
+        Locale.setDefault(Locale.ENGLISH);
         Person person = new Person();
         person.setFirstName("");
         person.setLastName("smith");

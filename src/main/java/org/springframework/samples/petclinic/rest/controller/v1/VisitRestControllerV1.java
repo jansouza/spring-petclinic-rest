@@ -16,18 +16,15 @@
 
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.springframework.samples.petclinic.mapper.VisitMapper;
 import org.springframework.samples.petclinic.model.Visit;
 import org.springframework.samples.petclinic.rest.api.VisitsApi;
 import org.springframework.samples.petclinic.rest.dto.VisitDto;
 import org.springframework.samples.petclinic.rest.dto.VisitFieldsDto;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
@@ -37,9 +34,9 @@ import java.util.List;
  * @author Vitaliy Fedoriv
  */
 
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("api")
+// Quarkus: was @RestController @CrossOrigin @RequestMapping("/api"). The /api prefix is now @ApplicationPath("/api") on PetClinicApplication and
+// CORS is configured with quarkus.http.cors.* in application.properties.
+@ApplicationScoped
 public class VisitRestControllerV1 implements VisitsApi {
 
     private final ClinicService clinicService;
@@ -52,60 +49,59 @@ public class VisitRestControllerV1 implements VisitsApi {
     }
 
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<List<VisitDto>> listVisits() {
+    public Response listVisits() {
         List<Visit> visits = new ArrayList<>(this.clinicService.findAllVisits());
         if (visits.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(new ArrayList<>(visitMapper.toVisitsDto(visits)), HttpStatus.OK);
+        return Response.ok(new ArrayList<>(visitMapper.toVisitsDto(visits))).build();
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<VisitDto> getVisit( Integer visitId) {
+    public Response getVisit( Integer visitId) {
         Visit visit = this.clinicService.findVisitById(visitId);
         if (visit == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return new ResponseEntity<>(visitMapper.toVisitDto(visit), HttpStatus.OK);
+        return Response.ok(visitMapper.toVisitDto(visit)).build();
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<VisitDto> addVisit(VisitDto visitDto) {
-        HttpHeaders headers = new HttpHeaders();
+    public Response addVisit(VisitDto visitDto) {
         Visit visit = visitMapper.toVisit(visitDto);
         this.clinicService.saveVisit(visit);
         visitDto = visitMapper.toVisitDto(visit);
-        headers.setLocation(UriComponentsBuilder.newInstance().path("/api/visits/{id}").buildAndExpand(visit.getId()).toUri());
-        return new ResponseEntity<>(visitDto, headers, HttpStatus.CREATED);
+        String location = "/api/visits/" + visit.getId();
+        return Response.status(Response.Status.CREATED).header(HttpHeaders.LOCATION, location).entity(visitDto).build();
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<VisitDto> updateVisit(Integer visitId, VisitFieldsDto visitDto) {
+    public Response updateVisit(Integer visitId, VisitFieldsDto visitDto) {
         Visit currentVisit = this.clinicService.findVisitById(visitId);
         if (currentVisit == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         currentVisit.setDate(visitDto.getDate());
         currentVisit.setDescription(visitDto.getDescription());
         this.clinicService.saveVisit(currentVisit);
-        return new ResponseEntity<>(visitMapper.toVisitDto(currentVisit), HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    // TODO: Migration required - @PreAuthorize("hasRole(@roles.OWNER_ADMIN)") not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Transactional
     @Override
-    public ResponseEntity<VisitDto> deleteVisit(Integer visitId) {
+    public Response deleteVisit(Integer visitId) {
         Visit visit = this.clinicService.findVisitById(visitId);
         if (visit == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         this.clinicService.deleteVisit(visit);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
 }

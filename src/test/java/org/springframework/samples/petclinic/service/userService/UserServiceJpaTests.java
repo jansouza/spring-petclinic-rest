@@ -1,10 +1,8 @@
 package org.springframework.samples.petclinic.service.userService;
 
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import io.quarkus.test.junit.QuarkusTest;
 
-@SpringBootTest
-@ActiveProfiles({"jpa", "hsqldb"})
+@QuarkusTest
 class UserServiceJpaTests extends AbstractUserServiceTests {
 
 }

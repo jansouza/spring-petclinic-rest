@@ -15,14 +15,12 @@
  */
 package org.springframework.samples.petclinic.repository.jpa;
 
-import org.springframework.context.annotation.Profile;
-import org.springframework.dao.DataAccessException;
 import org.springframework.samples.petclinic.model.Vet;
 import org.springframework.samples.petclinic.repository.VetRepository;
-import org.springframework.stereotype.Repository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.inject.Inject;
 import java.util.Collection;
 
 /**
@@ -34,27 +32,26 @@ import java.util.Collection;
  * @author Michael Isvy
  * @author Vitaliy Fedoriv
  */
-@Repository
-@Profile("jpa")
+@ApplicationScoped
 public class JpaVetRepositoryImpl implements VetRepository {
 
-    @PersistenceContext
+    @Inject
     private EntityManager em;
 
 
 	@Override
-	public Vet findById(int id) throws DataAccessException {
+	public Vet findById(int id) {
 		return this.em.find(Vet.class, id);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Collection<Vet> findAll() throws DataAccessException {
+	public Collection<Vet> findAll() {
 		return this.em.createQuery("SELECT vet FROM Vet vet").getResultList();
 	}
 
 	@Override
-	public void save(Vet vet) throws DataAccessException {
+	public void save(Vet vet) {
         if (vet.getId() == null) {
             this.em.persist(vet);
         } else {
@@ -63,7 +60,7 @@ public class JpaVetRepositoryImpl implements VetRepository {
 	}
 
 	@Override
-	public void delete(Vet vet) throws DataAccessException {
+	public void delete(Vet vet) {
 		this.em.remove(this.em.contains(vet) ? vet : this.em.merge(vet));
 	}
 

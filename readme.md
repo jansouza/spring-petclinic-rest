@@ -22,7 +22,16 @@ The [spring-petclinic-angular project](https://github.com/spring-petclinic/sprin
 ```sh
 git clone https://github.com/spring-petclinic/spring-petclinic-rest.git
 cd spring-petclinic-rest
-./mvnw spring-boot:run
+./mvnw quarkus:dev
+```
+
+> **Quarkus migration:** this project was migrated from Spring Boot to Quarkus (Spring compatibility strategy). See [docs/quarkus-migration-decisions.md](docs/quarkus-migration-decisions.md) and [docs/migration-report.md](docs/migration-report.md).
+
+To build and run the packaged application:
+
+`sh
+./mvnw clean package
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
 ### With Docker
@@ -32,16 +41,18 @@ docker run -p 9966:9966 springcommunity/spring-petclinic-rest
 
 You can then access petclinic here: [http://localhost:9966/petclinic/](http://localhost:9966/petclinic/)
 
-There is an actuator health check route as well:
-* [http://localhost:9966/petclinic/actuator/health](http://localhost:9966/petclinic/actuator/health)
+There is a health check route as well:
+* [http://localhost:9966/petclinic/q/health](http://localhost:9966/petclinic/q/health)
+
+By default the server only listens on 127.0.0.1. Set PETCLINIC_HTTP_HOST to change the bind address (e.g. inside a container).
 
 ## 📖 OpenAPI REST API Documentation
 This project provides a RESTful API for managing a veterinary clinic's **owners, pets, veterinarians, visits, and specialties**.
 
 ### **Access Swagger UI**
-Swagger UI is available at: [http://localhost:9966/petclinic/swagger-ui.html](http://localhost:9966/petclinic/swagger-ui.html).
+Swagger UI is available at: [http://localhost:9966/petclinic/q/swagger-ui](http://localhost:9966/petclinic/q/swagger-ui).
 
-API documentation (OAS 3.1) is accessible at: [http://localhost:9966/petclinic/v3/api-docs](http://localhost:9966/petclinic/v3/api-docs).
+API documentation (OAS 3.1) is accessible at: [http://localhost:9966/petclinic/q/openapi](http://localhost:9966/petclinic/q/openapi).
 
 
 ## 📌 API Endpoints Overview
@@ -115,47 +126,30 @@ Petclinic supports the following databases:
 
 ### **Switching Databases**
 
-You can change the database by updating the `spring.profiles.active` property in `application.properties`:
+The database is selected with a Quarkus profile (`-Dquarkus.profile=<profile>`), which loads `application-<profile>.properties`.
 
-| Database  | Profile Configuration |
-|-----------|----------------------|
-| **H2** (Default)  | `spring.profiles.active=h2,spring-data-jpa` |
-| **HSQLDB** (Alternative In-Memory) | `spring.profiles.active=hsqldb,spring-data-jpa` |
-| **MySQL** (Persistent) | `spring.profiles.active=mysql,spring-data-jpa` |
-| **PostgreSQL** (Persistent) | `spring.profiles.active=postgres,spring-data-jpa` |
+| Database  | Build / run |
+|-----------|-------------|
+| **H2** (Default) | `./mvnw quarkus:dev` |
+| **HSQLDB** | _Not supported in Quarkus (no JDBC extension)_ |
+| **MySQL** (Persistent) | `./mvnw clean package -Dquarkus.profile=mysql` |
+| **PostgreSQL** (Persistent) | `./mvnw clean package -Dquarkus.profile=postgres` |
 
-For more details, see the [Spring Boot documentation](https://docs.spring.io/spring-boot/how-to/properties-and-configuration.html#howto.properties-and-configuration.set-active-spring-profiles).
+`quarkus.datasource.db-kind` is a build-time property, so MySQL and PostgreSQL require building the artifact with the matching profile. The Spring `jpa` / `jdbc` / `spring-data-jpa` repository-layer profiles no longer exist: the plain JPA implementation is always used.
 
 ### **Using H2 (Default)**
 - No additional setup is required.
 - The database schema and sample data are loaded automatically from `src/main/resources/db/h2/`.
-- You can access the **H2 Console** to inspect the database.
-
-### **Accessing the H2 Console**
-1. **Run the application:**
-   ```sh
-   mvn spring-boot:run
-   ```
-2. **Open H2 Console in your browser:**
-   - **URL**: http://localhost:9966/petclinic/h2-console
-   - **JDBC URL**: `jdbc:h2:mem:petclinic`
-   - **Username**: `sa`
-   - **Password**: _(leave blank)_
+- The H2 web console is not available in the Quarkus version.
 
 ### **Using HSQLDB**
-- HSQLDB works similarly to H2 as an **in-memory database**.
-- No additional setup is required—schema and sample data are loaded automatically from `src/main/resources/db/hsqldb/`.
-- Swtich to **HSQLDB** by modifying `application.properties`:
-
-    ```properties
-    spring.profiles.active=hsqldb,spring-data-jpa
-    ```
+- Not supported after the migration to Quarkus (there is no Quarkus JDBC extension for HSQLDB). Use H2, MySQL or PostgreSQL.
 
 ### **Using MySQL**
-Modify `application.properties`:
+Build and run with the `mysql` profile:
 
-```properties
-spring.profiles.active=mysql,spring-data-jpa
+```sh
+./mvnw clean package -Dquarkus.profile=mysql
 ```
 Start a MySQL database using Docker:
 ```bash
@@ -163,10 +157,10 @@ docker run -e MYSQL_USER=petclinic -e MYSQL_PASSWORD=petclinic -e MYSQL_ROOT_PAS
 ```
 
 ### **Using PostgreSQL**
-Modify application.properties:
+Build and run with the `postgres` profile:
 
-```properties
-spring.profiles.active=postgres,spring-data-jpa
+```sh
+./mvnw clean package -Dquarkus.profile=postgres
 ```
 Start a PostgreSQL database using Docker:
 ```bash
@@ -278,9 +272,9 @@ File -> Import -> Maven -> Existing Maven project
 |--|--|
 | REST API controllers | [REST folder](src/main/java/org/springframework/samples/petclinic/rest) |
 | Service | [ClinicServiceImpl.java](src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java) |
-| JDBC | [jdbc folder](src/main/java/org/springframework/samples/petclinic/repository/jdbc) |
+| JDBC (parked, not compiled) | [jdbc folder](src/main/java/org/springframework/samples/petclinic/repository/jdbc) |
 | JPA | [jpa folder](src/main/java/org/springframework/samples/petclinic/repository/jpa) |
-| Spring Data JPA | [springdatajpa folder](src/main/java/org/springframework/samples/petclinic/repository/springdatajpa) |
+| Spring Data JPA (parked, not compiled) | [springdatajpa folder](src/main/java/org/springframework/samples/petclinic/repository/springdatajpa) |
 | Tests | [AbstractClinicServiceTests.java](src/test/java/org/springframework/samples/petclinic/service/clinicService/AbstractClinicServiceTests.java) |
 
 ## Publishing a Docker image

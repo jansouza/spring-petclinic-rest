@@ -15,7 +15,6 @@
  */
 package org.springframework.samples.petclinic.model;
 
-import org.springframework.core.style.ToStringCreator;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Digits;
@@ -136,17 +135,17 @@ public class Owner extends Person {
         return getPetsInternal().stream().filter(p -> p.getId().equals(petId)).findFirst().orElse(null);
     }
 
+    // Quarkus: org.springframework.core.style.ToStringCreator is not available in the Spring compat API jars;
+    // the same output format ("Owner[id = 1, new = false, ...]") is built manually.
     @Override
     public String toString() {
-        return new ToStringCreator(this)
-
-            .append("id", this.getId())
-            .append("new", this.isNew())
-            .append("lastName", this.getLastName())
-            .append("firstName", this.getFirstName())
-            .append("address", this.address)
-            .append("city", this.city)
-            .append("telephone", this.telephone)
-            .toString();
+        return getClass().getName() + " ["
+            + "id = '" + this.getId() + "', "
+            + "new = '" + this.isNew() + "', "
+            + "lastName = '" + this.getLastName() + "', "
+            + "firstName = '" + this.getFirstName() + "', "
+            + "address = '" + this.address + "', "
+            + "city = '" + this.city + "', "
+            + "telephone = '" + this.telephone + "']";
     }
 }

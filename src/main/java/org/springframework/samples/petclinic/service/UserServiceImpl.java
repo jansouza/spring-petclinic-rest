@@ -4,10 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.petclinic.model.User;
 import org.springframework.samples.petclinic.model.Role;
 import org.springframework.samples.petclinic.repository.UserRepository;
-import org.springframework.stereotype.Service;
+import jakarta.enterprise.context.ApplicationScoped;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+// was: @Service (Singleton via quarkus-spring-di). ApplicationScoped is a normal scope, so the bean can be mocked with @InjectMock in tests
+@ApplicationScoped
 public class UserServiceImpl implements UserService {
 
     @Autowired

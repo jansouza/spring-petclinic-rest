@@ -1,9 +1,8 @@
 package org.springframework.samples.petclinic.service.clinicService;
 
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 /**
  * <p> Integration test using the jpa profile.
@@ -14,11 +13,10 @@ import org.springframework.test.context.ActiveProfiles;
  * @see AbstractClinicServiceTests AbstractClinicServiceTests for more details. </p>
  */
 
-@SpringBootTest
-@ActiveProfiles({"jpa", "hsqldb"})
+@QuarkusTest
 class ClinicServiceJpaTests extends AbstractClinicServiceTests {
 
-    @Autowired
+    @Inject
     EntityManager entityManager;
 
     @Override

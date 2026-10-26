@@ -16,32 +16,31 @@
 
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import java.io.IOException;
+import io.vertx.ext.web.Router;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
- * @author Vitaliy Fedoriv
+ * Redirects the application root to the Swagger UI.
+ * <p>
+ * Quarkus migration: was a Spring {@code @RestController} mapped to "/" that used {@code HttpServletResponse.sendRedirect}
+ * and {@code @Value("#{servletContext.contextPath}")}. The servlet API is not available in Quarkus, and a JAX-RS
+ * resource would now live under the "/api" application path, so the redirect is registered as a Vert.x route instead.
+ * The {@code @CrossOrigin} setting is replaced by {@code quarkus.http.cors.*} in application.properties.
  *
+ * @author Vitaliy Fedoriv
  */
-
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("/")
+@ApplicationScoped
 public class RootRestControllerV1 {
 
-    @Value("#{servletContext.contextPath}")
-    private String servletContextPath;
+    @ConfigProperty(name = "quarkus.http.root-path", defaultValue = "/")
+    String rootPath;
 
-	@RequestMapping(value = "/")
-	public void redirectToSwagger(HttpServletResponse response) throws IOException {
-		response.sendRedirect(this.servletContextPath + "/swagger-ui/index.html");
-	}
+    void redirectToSwagger(@Observes Router router) {
+        String contextPath = this.rootPath.endsWith("/") ? this.rootPath : this.rootPath + "/";
+        router.get(contextPath).handler(ctx -> ctx.redirect(contextPath + "q/swagger-ui/"));
+    }
 
 }
-

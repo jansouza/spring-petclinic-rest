@@ -16,22 +16,18 @@
 
 package org.springframework.samples.petclinic.rest.controller.v1;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.springframework.samples.petclinic.mapper.UserMapper;
 import org.springframework.samples.petclinic.model.User;
 import org.springframework.samples.petclinic.rest.api.UsersApi;
 import org.springframework.samples.petclinic.rest.dto.UserDto;
 import org.springframework.samples.petclinic.service.UserService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-@CrossOrigin(exposedHeaders = "errors, content-type")
-@RequestMapping("api")
+// Quarkus: was @RestController @CrossOrigin @RequestMapping("/api"). The /api prefix is now @ApplicationPath("/api") on PetClinicApplication and
+// CORS is configured with quarkus.http.cors.* in application.properties.
+@ApplicationScoped
 public class UserRestControllerV1 implements UsersApi {
 
     private final UserService userService;
@@ -43,12 +39,11 @@ public class UserRestControllerV1 implements UsersApi {
     }
 
 
-    @PreAuthorize( "hasRole(@roles.ADMIN)" )
+    // TODO: Migration required - @PreAuthorize( "hasRole(@roles.ADMIN)" ) not applied: Spring Security SpEL (@roles bean) is not supported by quarkus-spring-security.
     @Override
-    public ResponseEntity<UserDto> addUser(UserDto userDto) {
-        HttpHeaders headers = new HttpHeaders();
+    public Response addUser(UserDto userDto) {
         User user = userMapper.toUser(userDto);
         this.userService.saveUser(user);
-        return new ResponseEntity<>(userMapper.toUserDto(user), headers, HttpStatus.CREATED);
+        return Response.status(Response.Status.CREATED).entity(userMapper.toUserDto(user)).build();
     }
 }

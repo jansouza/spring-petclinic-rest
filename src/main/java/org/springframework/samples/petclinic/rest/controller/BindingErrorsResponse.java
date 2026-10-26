@@ -19,12 +19,13 @@ package org.springframework.samples.petclinic.rest.controller;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import tools.jackson.core.JacksonException;
+import java.util.Set;
+
+import jakarta.validation.ConstraintViolation;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * @author Vitaliy Fedoriv
@@ -67,25 +68,26 @@ public class BindingErrorsResponse {
 		this.bindingErrors.add(bindingError);
 	}
 
-	public void addAllErrors(BindingResult bindingResult) {
-		for (FieldError fieldError : bindingResult.getFieldErrors()) {
+	// Quarkus: was addAllErrors(org.springframework.validation.BindingResult); now takes Bean Validation violations.
+	public void addAllErrors(Set<? extends ConstraintViolation<?>> violations) {
+		for (ConstraintViolation<?> violation : violations) {
 			BindingError error = new BindingError();
-			error.setObjectName(fieldError.getObjectName());
-			error.setFieldName(fieldError.getField());
-			error.setFieldValue(String.valueOf(fieldError.getRejectedValue()));
-			error.setErrorMessage(fieldError.getDefaultMessage());
+			error.setObjectName(violation.getRootBeanClass().getSimpleName());
+			error.setFieldName(violation.getPropertyPath().toString());
+			error.setFieldValue(String.valueOf(violation.getInvalidValue()));
+			error.setErrorMessage(violation.getMessage());
 			addError(error);
 		}
 	}
 
 	public String toJSON() {
-		ObjectMapper mapper = JsonMapper.builder()
-                .changeDefaultVisibility(v -> v.withFieldVisibility(Visibility.ANY))
-                    .build();
+		// Quarkus: Jackson 2 (com.fasterxml) is used by quarkus-rest-jackson; the Spring Boot 4 app used Jackson 3 (tools.jackson).
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
 		String errorsAsJSON = "";
 		try {
 			errorsAsJSON = mapper.writeValueAsString(bindingErrors);
-		} catch (JacksonException e) {
+		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
 		return errorsAsJSON;

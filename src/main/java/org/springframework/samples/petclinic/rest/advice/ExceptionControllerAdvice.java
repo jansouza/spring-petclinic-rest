@@ -16,135 +16,130 @@
 
 package org.springframework.samples.petclinic.rest.advice;
 
-import java.net.URI;
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-import org.springframework.http.ResponseEntity;
+import jakarta.persistence.PersistenceException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+
+import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.server.ServerExceptionMapper;
 import org.springframework.samples.petclinic.rest.controller.BindingErrorsResponse;
+import org.springframework.samples.petclinic.rest.dto.ProblemDetailDto;
 import org.springframework.samples.petclinic.rest.dto.ValidationMessageDto;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * Global Exception handler for REST controllers.
  * <p>
  * This class handles exceptions thrown by REST controllers and returns appropriate HTTP responses to the client.
+ * <p>
+ * Quarkus migration: this class used to be a Spring {@code @ControllerAdvice} with {@code @ExceptionHandler} methods
+ * returning {@code ResponseEntity<ProblemDetail>}. The handlers are now Quarkus REST {@link ServerExceptionMapper}s
+ * returning the generated {@link ProblemDetailDto} (same fields as the Spring {@code ProblemDetail}). The mapping is:
+ * <ul>
+ * <li>{@code Exception} -&gt; 500 (unchanged)</li>
+ * <li>{@code DataIntegrityViolationException} (Spring DAO) -&gt; {@link PersistenceException} (JPA) -&gt; 404 (unchanged status)</li>
+ * <li>{@code MethodArgumentNotValidException} (Spring MVC) -&gt; {@link ConstraintViolationException} (Bean Validation) -&gt; 400</li>
+ * </ul>
  *
  * @author Vitaliy Fedoriv
  * @author Alexander Dudkin
  */
-@ControllerAdvice
 public class ExceptionControllerAdvice {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExceptionControllerAdvice.class);
+    private static final Logger logger = Logger.getLogger(ExceptionControllerAdvice.class);
     private static final String ERROR_UNEXPECTED = "An unexpected error occurred while processing your request";
     private static final String ERROR_DATA_INTEGRITY = "The requested resource could not be processed due to a data constraint violation";
     private static final String ERROR_INVALID_REQUEST = "The request contains invalid or missing parameters";
+    private static final String PROBLEM_JSON = "application/problem+json";
 
     /**
-     * Private method for constructing the {@link ProblemDetail} object passing the name and details of the exception
+     * Private method for constructing the {@link ProblemDetailDto} object passing the name and details of the exception
      * class.
      *
-     * @param e     Object referring to the thrown exception.
-     * @param status HTTP response status.
-     * @param url URL request.
+     * @param e       Object referring to the thrown exception.
+     * @param status  HTTP response status.
+     * @param uriInfo Information about the current request URI.
      */
-    private ProblemDetail detailBuild(Exception e, HttpStatus status, StringBuffer url, String detail) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(status);
-        problemDetail.setType(URI.create(url.toString()));
-        problemDetail.setTitle(e.getClass().getSimpleName());
-        problemDetail.setDetail(detail);
-        problemDetail.setProperty("timestamp", Instant.now());
-        problemDetail.setProperty("schemaValidationErrors", List.<ValidationMessageDto>of());
-        return problemDetail;
+    private ProblemDetailDto detailBuild(Exception e, Response.Status status, UriInfo uriInfo, String detail) {
+        return new ProblemDetailDto()
+            .type(uriInfo.getRequestUri())
+            .title(e.getClass().getSimpleName())
+            .status(status.getStatusCode())
+            .detail(detail)
+            .timestamp(OffsetDateTime.now())
+            .schemaValidationErrors(List.<ValidationMessageDto>of());
+    }
+
+    private Response build(Response.Status status, ProblemDetailDto detail) {
+        return Response.status(status).type(PROBLEM_JSON).entity(detail).build();
     }
 
     /**
      * Handles all general exceptions by returning a 500 Internal Server Error status with error details.
-     *
-     * @param e The {@link Exception} to be handled
-     * @param request {@link HttpServletRequest} object referring to the current request.
-     * @return A {@link ResponseEntity} containing the error information and a 500 Internal Server Error status
+     * <p>
+     * JAX-RS {@link WebApplicationException}s (for example 404 for an unknown path or 405) keep their own response.
      */
-    @ExceptionHandler(Exception.class)
-    @ResponseBody
-    public ResponseEntity<ProblemDetail> handleGeneralException(Exception e, HttpServletRequest request) {
-        logger.error("Unexpected error at {} {}", request.getMethod(), request.getRequestURI(), e);
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        ProblemDetail detail = this.detailBuild(e, status, request.getRequestURL(), ERROR_UNEXPECTED);
-        return ResponseEntity.status(status).body(detail);
-    }
-
-    /**
-     * Handles {@link DataIntegrityViolationException} which typically indicates database constraint violations. This
-     * method returns a 404 Not Found status if an entity does not exist.
-     *
-     * @param e The {@link DataIntegrityViolationException} to be handled
-     * @param request {@link HttpServletRequest} object referring to the current request.
-     * @return A {@link ResponseEntity} containing the error information and a 404 Not Found status
-     */
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    @ResponseBody
-    public ResponseEntity<ProblemDetail> handleDataIntegrityViolationException(DataIntegrityViolationException e, HttpServletRequest request) {
-        logger.warn("Data integrity violation at {} {}: {}",
-            request.getMethod(),
-            request.getRequestURI(),
-            e.getMessage());
-        logger.debug("Data integrity violation stacktrace", e);
-        HttpStatus status = HttpStatus.NOT_FOUND;
-        ProblemDetail detail = this.detailBuild(e, status, request.getRequestURL(), ERROR_DATA_INTEGRITY);
-        return ResponseEntity.status(status).body(detail);
-    }
-
-    /**
-     * Handles exception thrown by Bean Validation on controller methods parameters
-     *
-     * @param e The {@link MethodArgumentNotValidException} to be handled
-     * @param request {@link HttpServletRequest} object referring to the current request.
-     * @return A {@link ResponseEntity} containing the error information and a 400 Bad Request status.
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseBody
-    public ResponseEntity<ProblemDetail> handleMethodArgumentNotValidException(MethodArgumentNotValidException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-        BindingErrorsResponse errors = new BindingErrorsResponse();
-        BindingResult bindingResult = e.getBindingResult();
-        ProblemDetail detail = this.detailBuild(e, status, request.getRequestURL(), ERROR_INVALID_REQUEST);
-        if (bindingResult.hasErrors()) {
-            errors.addAllErrors(bindingResult);
-            List<ValidationMessageDto> schemaValidationErrors = bindingResult.getFieldErrors().stream()
-                .map(fieldError -> {
-                    String rejectedValue = Objects.toString(fieldError.getRejectedValue(), "null");
-                    String defaultMessage = Objects.toString(fieldError.getDefaultMessage(), "Validation failed");
-                    String message = "Field '%s' %s (rejected value: %s)".formatted(
-                        fieldError.getField(),
-                        defaultMessage,
-                        rejectedValue);
-                    return new ValidationMessageDto(message)
-                        .putAdditionalProperty("field", fieldError.getField())
-                        .putAdditionalProperty("rejectedValue", rejectedValue)
-                        .putAdditionalProperty("defaultMessage", defaultMessage);
-                })
-                .toList();
-            logger.debug("Validation error at {} {}: {}",
-                request.getMethod(),
-                request.getRequestURI(),
-                bindingResult.getFieldErrors());
-            detail.setProperty("schemaValidationErrors", schemaValidationErrors);
-            return ResponseEntity.status(status).body(detail);
+    @ServerExceptionMapper
+    public Response handleGeneralException(Exception e, UriInfo uriInfo) {
+        if (e instanceof WebApplicationException webApplicationException) {
+            return webApplicationException.getResponse();
         }
-        return ResponseEntity.status(status).body(detail);
+        logger.errorf(e, "Unexpected error at %s", uriInfo.getRequestUri());
+        return build(Response.Status.INTERNAL_SERVER_ERROR,
+            this.detailBuild(e, Response.Status.INTERNAL_SERVER_ERROR, uriInfo, ERROR_UNEXPECTED));
+    }
+
+    /**
+     * Handles {@link PersistenceException} which typically indicates database constraint violations. This
+     * method returns a 404 Not Found status if an entity does not exist.
+     * <p>
+     * TODO: Migration required - Spring's DataIntegrityViolationException was raised by Spring's exception translation,
+     * which does not exist in Quarkus; every JPA PersistenceException is mapped here to keep the 404 behaviour.
+     */
+    @ServerExceptionMapper
+    public Response handlePersistenceException(PersistenceException e, UriInfo uriInfo) {
+        logger.warnf("Data integrity violation at %s: %s", uriInfo.getRequestUri(), e.getMessage());
+        logger.debug("Data integrity violation stacktrace", e);
+        return build(Response.Status.NOT_FOUND,
+            this.detailBuild(e, Response.Status.NOT_FOUND, uriInfo, ERROR_DATA_INTEGRITY));
+    }
+
+    /**
+     * Handles exception thrown by Bean Validation on resource method parameters.
+     *
+     * @return A {@link Response} containing the error information and a 400 Bad Request status.
+     */
+    @ServerExceptionMapper
+    public Response handleConstraintViolationException(ConstraintViolationException e, UriInfo uriInfo) {
+        Response.Status status = Response.Status.BAD_REQUEST;
+        BindingErrorsResponse errors = new BindingErrorsResponse();
+        ProblemDetailDto detail = this.detailBuild(e, status, uriInfo, ERROR_INVALID_REQUEST);
+        if (!e.getConstraintViolations().isEmpty()) {
+            errors.addAllErrors(e.getConstraintViolations());
+            List<ValidationMessageDto> schemaValidationErrors = e.getConstraintViolations().stream()
+                .map(this::toValidationMessage)
+                .toList();
+            logger.debugf("Validation error at %s: %s", uriInfo.getRequestUri(), e.getConstraintViolations());
+            detail.setSchemaValidationErrors(schemaValidationErrors);
+        }
+        return build(status, detail);
+    }
+
+    private ValidationMessageDto toValidationMessage(ConstraintViolation<?> violation) {
+        String field = violation.getPropertyPath().toString();
+        String rejectedValue = Objects.toString(violation.getInvalidValue(), "null");
+        String defaultMessage = Objects.toString(violation.getMessage(), "Validation failed");
+        String message = "Field '%s' %s (rejected value: %s)".formatted(field, defaultMessage, rejectedValue);
+        return new ValidationMessageDto().message(message)
+            .putAdditionalProperty("field", field)
+            .putAdditionalProperty("rejectedValue", rejectedValue)
+            .putAdditionalProperty("defaultMessage", defaultMessage);
     }
 
 }

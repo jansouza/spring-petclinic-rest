@@ -16,64 +16,55 @@
 
 package org.springframework.samples.petclinic.rest.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
+import jakarta.persistence.PersistenceException;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.notNullValue;
+
 import org.springframework.samples.petclinic.rest.controller.v1.VisitRestControllerV1;
-import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.samples.petclinic.mapper.VisitMapper;
 import org.springframework.samples.petclinic.model.Owner;
 import org.springframework.samples.petclinic.model.Pet;
 import org.springframework.samples.petclinic.model.PetType;
 import org.springframework.samples.petclinic.model.Visit;
-import org.springframework.samples.petclinic.rest.advice.ExceptionControllerAdvice;
 import org.springframework.samples.petclinic.service.ClinicService;
-import org.springframework.samples.petclinic.service.clinicService.ApplicationTestConfig;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Test class for {@link VisitRestControllerV1}
  *
  * @author Vitaliy Fedoriv
  */
-@SpringBootTest
-@ContextConfiguration(classes=ApplicationTestConfig.class)
-@WebAppConfiguration
+@QuarkusTest
 class VisitRestControllerV1Tests {
 
-    @Autowired
-    private VisitRestControllerV1 visitRestControllerV1;
+    @InjectMock
+    ClinicService clinicService;
 
-    @MockitoBean
-    private ClinicService clinicService;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Autowired
-    private VisitMapper visitMapper;
-
-    private MockMvc mockMvc;
+    @Inject
+    VisitMapper visitMapper;
 
     private List<Visit> visits;
 
     @BeforeEach
     void initVisits(){
-        this.mockMvc = MockMvcBuilders.standaloneSetup(visitRestControllerV1)
-    			.setControllerAdvice(new ExceptionControllerAdvice())
-    			.build();
 
         visits = new ArrayList<>();
 
@@ -96,7 +87,6 @@ class VisitRestControllerV1Tests {
     	pet.setOwner(owner);
     	pet.setType(petType);
 
-
     	Visit visit = new Visit();
     	visit.setId(2);
     	visit.setPet(pet);
@@ -111,135 +101,169 @@ class VisitRestControllerV1Tests {
     	visit.setDescription("neutered");
     	visits.add(visit);
 
-
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testGetVisitSuccess() throws Exception {
     	given(this.clinicService.findVisitById(2)).willReturn(visits.get(0));
-        this.mockMvc.perform(get("/api/visits/2")
-        	.accept(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType("application/json"))
-            .andExpect(jsonPath("$.id").value(2))
-            .andExpect(jsonPath("$.description").value("rabies shot"));
+        RestAssured.given()
+                .accept(ContentType.JSON)
+            .when()
+                .get("/api/visits/2")
+            .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("id", equalTo(2))
+                .body("description", equalTo("rabies shot"));
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testGetVisitNotFound() throws Exception {
         given(this.clinicService.findVisitById(999)).willReturn(null);
-        this.mockMvc.perform(get("/api/visits/999")
-        	.accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNotFound());
+        RestAssured.given()
+                .accept(ContentType.JSON)
+            .when()
+                .get("/api/visits/999")
+            .then()
+                .statusCode(404);
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testGetAllVisitsSuccess() throws Exception {
     	given(this.clinicService.findAllVisits()).willReturn(visits);
-        this.mockMvc.perform(get("/api/visits")
-        	.accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType("application/json"))
-        	.andExpect(jsonPath("$.[0].id").value(2))
-        	.andExpect(jsonPath("$.[0].description").value("rabies shot"))
-        	.andExpect(jsonPath("$.[1].id").value(3))
-        	.andExpect(jsonPath("$.[1].description").value("neutered"));
+        RestAssured.given()
+                .accept(ContentType.JSON)
+            .when()
+                .get("/api/visits")
+            .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("[0].id", equalTo(2))
+                .body("[0].description", equalTo("rabies shot"))
+                .body("[1].id", equalTo(3))
+                .body("[1].description", equalTo("neutered"));
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testGetAllVisitsNotFound() throws Exception {
     	visits.clear();
     	given(this.clinicService.findAllVisits()).willReturn(visits);
-        this.mockMvc.perform(get("/api/visits")
-        	.accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNotFound());
+        RestAssured.given()
+                .accept(ContentType.JSON)
+            .when()
+                .get("/api/visits")
+            .then()
+                .statusCode(404);
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testCreateVisitSuccess() throws Exception {
     	Visit newVisit = visits.get(0);
     	newVisit.setId(999);
-    	ObjectMapper mapper = new ObjectMapper();
+    	ObjectMapper mapper = this.objectMapper;
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisitDto(newVisit));
     	System.out.println("newVisitAsJSON " + newVisitAsJSON);
-    	this.mockMvc.perform(post("/api/visits")
-    		.content(newVisitAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
-    		.andExpect(status().isCreated());
+    	RestAssured.given()
+    	        .body(newVisitAsJSON)
+    	        .accept(ContentType.JSON)
+    	        .contentType(ContentType.JSON)
+    	    .when()
+    	        .post("/api/visits")
+    	    .then()
+    	        .statusCode(201);
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testCreateVisitError() throws Exception {
     	Visit newVisit = visits.get(0);
     	newVisit.setId(null);
         newVisit.setDescription(null);
-    	ObjectMapper mapper = new ObjectMapper();
+    	ObjectMapper mapper = this.objectMapper;
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisitDto(newVisit));
-    	this.mockMvc.perform(post("/api/visits")
-        		.content(newVisitAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
-        		.andExpect(status().isBadRequest());
+    	RestAssured.given()
+    	        .body(newVisitAsJSON)
+    	        .accept(ContentType.JSON)
+    	        .contentType(ContentType.JSON)
+    	    .when()
+    	        .post("/api/visits")
+    	    .then()
+    	        .statusCode(400);
      }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testUpdateVisitSuccess() throws Exception {
     	given(this.clinicService.findVisitById(2)).willReturn(visits.get(0));
     	Visit newVisit = visits.get(0);
     	newVisit.setDescription("rabies shot test");
-    	ObjectMapper mapper = new ObjectMapper();
+    	ObjectMapper mapper = this.objectMapper;
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisitDto(newVisit));
-    	this.mockMvc.perform(put("/api/visits/2")
-    		.content(newVisitAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
-        	.andExpect(content().contentType("application/json"))
-        	.andExpect(status().isNoContent());
+    	RestAssured.given()
+    	        .body(newVisitAsJSON)
+    	        .accept(ContentType.JSON)
+    	        .contentType(ContentType.JSON)
+    	    .when()
+    	        .put("/api/visits/2")
+    	    .then()
+    	        .statusCode(204);
 
-    	this.mockMvc.perform(get("/api/visits/2")
-           	.accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType("application/json"))
-            .andExpect(jsonPath("$.id").value(2))
-            .andExpect(jsonPath("$.description").value("rabies shot test"));
+    	RestAssured.given()
+    	        .accept(ContentType.JSON)
+    	        .contentType(ContentType.JSON)
+    	    .when()
+    	        .get("/api/visits/2")
+    	    .then()
+    	        .statusCode(200)
+    	        .contentType(ContentType.JSON)
+    	        .body("id", equalTo(2))
+    	        .body("description", equalTo("rabies shot test"));
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testUpdateVisitError() throws Exception {
     	Visit newVisit = visits.get(0);
         newVisit.setDescription(null);
-    	ObjectMapper mapper = new ObjectMapper();
+    	ObjectMapper mapper = this.objectMapper;
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisitDto(newVisit));
-    	this.mockMvc.perform(put("/api/visits/2")
-    		.content(newVisitAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
-        	.andExpect(status().isBadRequest());
+    	RestAssured.given()
+    	        .body(newVisitAsJSON)
+    	        .accept(ContentType.JSON)
+    	        .contentType(ContentType.JSON)
+    	    .when()
+    	        .put("/api/visits/2")
+    	    .then()
+    	        .statusCode(400);
      }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testDeleteVisitSuccess() throws Exception {
     	Visit newVisit = visits.get(0);
-    	ObjectMapper mapper = new ObjectMapper();
+    	ObjectMapper mapper = this.objectMapper;
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisitDto(newVisit));
     	given(this.clinicService.findVisitById(2)).willReturn(visits.get(0));
-    	this.mockMvc.perform(delete("/api/visits/2")
-    		.content(newVisitAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
-        	.andExpect(status().isNoContent());
+    	RestAssured.given()
+    	        .body(newVisitAsJSON)
+    	        .accept(ContentType.JSON)
+    	        .contentType(ContentType.JSON)
+    	    .when()
+    	        .delete("/api/visits/2")
+    	    .then()
+    	        .statusCode(204);
     }
 
     @Test
-    @WithMockUser(roles="OWNER_ADMIN")
     void testDeleteVisitError() throws Exception {
     	Visit newVisit = visits.get(0);
-    	ObjectMapper mapper = new ObjectMapper();
+    	ObjectMapper mapper = this.objectMapper;
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisitDto(newVisit));
         given(this.clinicService.findVisitById(999)).willReturn(null);
-        this.mockMvc.perform(delete("/api/visits/999")
-    		.content(newVisitAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
-        	.andExpect(status().isNotFound());
+        RestAssured.given()
+                .body(newVisitAsJSON)
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+            .when()
+                .delete("/api/visits/999")
+            .then()
+                .statusCode(404);
     }
 
 }
